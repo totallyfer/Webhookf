@@ -7,7 +7,6 @@ const client = new Client({
     ] 
 });
 
-// Lê o token de forma segura a partir das variáveis de ambiente da Railway
 const TOKEN = process.env.DISCORD_TOKEN;
 
 // IDs reais dos cargos do teu servidor
@@ -30,8 +29,17 @@ client.once('ready', async () => {
         if (channel) {
             const embed = new EmbedBuilder()
                 .setTitle("🔔 Notificações")
-                .setDescription("• Selecione no menu abaixo as notificações que deseja receber no servidor. Escolha quais conteúdos deseja acompanhar e receba avisos quando houver novidades.")
-                .setColor(0xFFD700);
+                .setDescription(
+                    "• Selecione as notificações que deseja receber no servidor. Você poderá escolher quais tipos de conteúdo deseja acompanhar e receber avisos quando houver novidades.\n\n" +
+                    "🎮 **@Not Jogar** • Receba notificação quando alguém estiver procurando jogadores para jogar.\n\n" +
+                    "🎁 **@Not Sorteio** • Receba avisos sempre que um novo sorteio for iniciado.\n\n" +
+                    "📢 **@Not Notícias** • Receba comunicados, novidades e informações importantes do servidor.\n\n" +
+                    "📊 **@Not Enquetes** • Receba notificações quando novas enquetes estiverem disponíveis para votação.\n\n" +
+                    "⚔️ **@Not Competitivo** • Receba notificações sobre partidas, desafios e atividades competitivas do servidor.\n\n" +
+                    "✨ **@Not Gamenights** • Receba avisos sobre GameNights, partidas, atividades em grupo e recompensas disponíveis para os participantes."
+                )
+                .setColor(0xFFD700)
+                .setImage("https://iili.io/nuasu8N.png"); // Podes colocar o link direto de uma imagem bonita aqui se quiseres
 
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('menu_cargos')
@@ -49,16 +57,15 @@ client.once('ready', async () => {
 
             const row = new ActionRowBuilder().addComponents(selectMenu);
             
-            // Envia o painel para o canal
             await channel.send({ embeds: [embed], components: [row] });
-            console.log("Painel de cargos enviado com sucesso para o canal!");
+            console.log("Painel detalhado de cargos enviado com sucesso!");
         }
     } catch (error) {
         console.error("Erro ao enviar o painel automático:", error);
     }
 });
 
-// Evento para quando o utilizador seleciona opções no menu
+// Evento para gerir a seleção dos cargos no menu
 client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
     if (interaction.customId !== 'menu_cargos') return;
