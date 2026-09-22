@@ -39,7 +39,7 @@ client.once('ready', async () => {
                     "✨ **@Not Gamenights** • Receba avisos sobre GameNights, partidas, atividades em grupo e recompensas disponíveis para os participantes."
                 )
                 .setColor(0xFFD700)
-                .setImage("https://iili.io/nuasu8N.png"); // Podes colocar o link direto de uma imagem bonita aqui se quiseres
+                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551778580969689138/245_Sem_Titulo_20260903163413.png?ex=6ab335ec&is=6ab1e46c&hm=7502dc3d2b90d52a2da843f36edc4cbe103ce38cb6873457aab2a2db8830fd18&");
 
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('menu_cargos')
