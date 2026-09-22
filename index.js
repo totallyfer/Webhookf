@@ -10,7 +10,6 @@ let lastPlayerCount = -1;
 
 async function checkPrivateServer() {
     try {
-        // Pedido à API de servidores do jogo passando o cookie de autenticação para validar os servidores VIP do utilizador
         const response = await axios.get(`https://games.roblox.com/v1/games/${PLACE_ID}/servers/Private?limit=100`, {
             headers: {
                 'Cookie': `.ROBLOXSECURITY=${ROBLOX_SECURITY_COOKIE}`,
@@ -20,10 +19,13 @@ async function checkPrivateServer() {
         });
 
         const servers = response.data.data || [];
-        // Encontra o servidor privado através do código de acesso
         const myServer = servers.find(s => s.accessCode === ACCESS_CODE || s.id === ACCESS_CODE);
         
-        let playerCount = myServer ? myServer.playing : 1; // Se estás lá dentro e a API listar, apanha o número real; caso contrário assume 1 por estares lá
+        // Se o servidor não aparecer na lista ou se o array de jogadores estiver vazio, o contador é 0 real
+        let playerCount = 0;
+        if (myServer && myServer.playing !== undefined) {
+            playerCount = myServer.playing;
+        }
 
         if (playerCount !== lastPlayerCount) {
             lastPlayerCount = playerCount;
