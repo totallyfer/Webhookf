@@ -82,11 +82,11 @@ client.once('ready', async () => {
         const channelTicket = await client.channels.fetch(CHANNEL_TICKET_ID);
         if (channelTicket) {
             const embedTicket = new EmbedBuilder()
-                .setTitle("📄 Suporte De Ticket")
+                .setTitle("<:form:1545806408295915571> Suporte De Ticket")
                 .setDescription("Olá. Seja bem-vindo ao centro de atendimento da SFC, mais informações abaixo.")
                 .setColor(0x0055FF)
                 .addFields({
-                    name: "🔍 Suporte Geral",
+                    name: "<:lupa:1545806404902985808> Suporte Geral",
                     value: "• Sorteios\n• Denúncias\n• Resgatar\n• Problemas\n• Parcerias\n• Dúvidas"
                 })
                 .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551790694253858837/242_Sem_Titulo_20260903145814.png?ex=6ab34134&is=6ab1efb4&hm=c6a90148f98434cfd0fef50c29311e0675bd6650062a448dfd09822a68c2b17c&");
