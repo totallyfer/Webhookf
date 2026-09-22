@@ -1,9 +1,11 @@
 {
-  "name": "monitor-flee",
+  "name": "bot-cargos",
   "version": "1.0.0",
-  "description": "Monitor de servidor privado do Roblox",
   "main": "index.js",
   "dependencies": {
-    "axios": "latest"
+    "discord.js": "^14.14.1"
+  },
+  "scripts": {
+    "start": "node index.js"
   }
 }
