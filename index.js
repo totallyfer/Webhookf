@@ -1,4 +1,18 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } = require('discord.js');
+const express = require('express');
+
+// --- Configuração do Servidor Web para o Render ---
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('Bot do Discord está online e ativo!');
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor web a correr na porta ${PORT}`);
+});
+// --------------------------------------------------
 
 const client = new Client({ 
     intents: [
