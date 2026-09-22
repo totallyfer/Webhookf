@@ -1,56 +1,95 @@
-const axios = require('axios');
+const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } = require('discord.js');
 
-const WEBHOOK_URL = "https://discord.com/api/webhooks/1551708517780684890/u7YVefChhhN16aIbI0vUIx1lyN6cXRZXCtWl8h2S3R433O14xGmYKWTWWEFZWjROAHtd";
-const ROBLOX_SECURITY_COOKIE = "_WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items._|CAEQAhoEEAQYASIcCgRkdWlrEhQxMzU5MjQ4OTkzaNzU5NzI5NTQ3NmlUCgV1bmFtFtZRItLdG90UIJeWZlZmlnODdWIkeg5dWlkEgsxMDY3NTMzNzNsM3IgD.xnPPdbwD787_liHVkxvu3pjV5DLegF8P4wHAcREq_BHEljtkIw7Fr9dH_F5ruzljRqufTYRGU36WBGo8kwZ5sBMIOzLwnBzDxpNQT2wC2tVc06N_23Hqqf740wpGc0kFFX04oKafC6ZPTdvpv1-MBs7sidW3wf5slowRFdHr4LgGET7rX-GOTJmdAUiGy0y3bTnU6gB8e9bDitsq5lipTdD7xlQpw24MxFUcFgSDUMn218kBIS223noJKHdahWicGsaDXxdprlWinX_X1APU2gtnLfg9SRHFQgNWP3oEeEeOXKDmEZFBLHbdSRzsSLQUVLtgaiiM-yXcUhu1mcxxU_Kpv1qR34ZbOAKti3MTGjplI-c6SYQ-0KSuQd0uVJwGdRmPyL3EU4Z9S0gB7exzVkHq0BrmRy4dnlGiqCzuyBZ7EH2sAms-p-wnYAncsWjBt0ZHHqGwyIslbjUc-6pOxerU61h72XhDgfdo0hslgKfwtgAsdKl-mH3kZ-69y2vL0bt_aAxL77qToag1OaV02FXVF8hZtbqgwfKNTkTfN0cq4SzeqKe0Gzplva2X79M_NIOJq-H5Xea6oQvDwQK0LjKgTdP-xh2rVcxUoMyG-QSWd6JTJJuXBi-MA3_kN_68nsOKHIdAInVw7rmtagCyTYxPFii-OANK3OI3_4iQcFezJ9Gp4OMuAqBgJ_jySONa241V0sp030TzSazDGPWeiyWv3EuNKTTY8NA5XN94h_jukdgVMWcc52pZ0TLJ-tNxrmQDQY-YN2c6-G4WzGR-sIXPUS0rPjnirlcvdXW3kEx54F6749fnKil1w7GKWgnNndWn8yeSJz0pMnclOUNSVH6CWP-QI7qrkzZldXgrR7nRyf5n6R10NNpvG_9e7f12zE7VoSUdRwEMYqwgrwEpcA.x0L2nlqOjFBIxORe9E2mu";
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMembers
+    ] 
+});
 
-const PLACE_ID = 893973440; // Flee the Facility Place ID
-const ACCESS_CODE = "2d4e759b86daa346829c63217e903bee";
+const TOKEN = "MTU1MTc2ODIwNTQ0NDI1OTg2Mg.GX9eVw.jsLZuHUqQ3qysuqtcbzZYW9VPjCuW6vai8CWTA";
 
-let lastPlayerCount = -1;
+// IDs reais dos cargos do teu servidor
+const rolesMap = {
+    'cargo_jogar': '1545802190348615722',
+    'cargo_sorteio': '1545802191602982945',
+    'cargo_noticias': '1545802192810938429',
+    'cargo_enquetes': '1545802196183158826',
+    'cargo_gamenights': '1545802199060447302',
+    'cargo_competitivo': '1545802198129057863'
+};
 
-async function checkPrivateServer() {
+const CHANNEL_ID = "1545802265519071272";
+
+client.once('ready', async () => {
+    console.log(`Bot online como ${client.user.tag}!`);
+
     try {
-        const response = await axios.get(`https://games.roblox.com/v1/games/${PLACE_ID}/servers/Private?limit=100`, {
-            headers: {
-                'Cookie': `.ROBLOXSECURITY=${ROBLOX_SECURITY_COOKIE}`,
-                'Referer': 'https://www.roblox.com/',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            }
-        });
+        const channel = await client.channels.fetch(CHANNEL_ID);
+        if (channel) {
+            const embed = new EmbedBuilder()
+                .setTitle("🔔 Notificações")
+                .setDescription("• Selecione no menu abaixo as notificações que deseja receber no servidor. Escolha quais conteúdos deseja acompanhar e receba avisos quando houver novidades.")
+                .setColor(0xFFD700);
 
-        const servers = response.data.data || [];
-        const myServer = servers.find(s => s.accessCode === ACCESS_CODE || s.id === ACCESS_CODE);
-        
-        // Se o servidor não aparecer na lista ou se o array de jogadores estiver vazio, o contador é 0 real
-        let playerCount = 0;
-        if (myServer && myServer.playing !== undefined) {
-            playerCount = myServer.playing;
-        }
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId('menu_cargos')
+                .setPlaceholder('Clique aqui para escolher os cargos...')
+                .setMinValues(0)
+                .setMaxValues(6)
+                .addOptions([
+                    { label: 'Not Jogar', description: 'Avisos de quem procura jogadores', value: 'cargo_jogar', emoji: '🎮' },
+                    { label: 'Not Sorteio', description: 'Avisos de novos sorteios', value: 'cargo_sorteio', emoji: '🎁' },
+                    { label: 'Not Notícias', description: 'Comunicados e novidades do servidor', value: 'cargo_noticias', emoji: '📢' },
+                    { label: 'Not Enquetes', description: 'Avisos de novas enquetes', value: 'cargo_enquetes', emoji: '📊' },
+                    { label: 'Not Gamenights', description: 'Avisos de eventos e Gamenights', value: 'cargo_gamenights', emoji: '✨' },
+                    { label: 'Not Competitivo', description: 'Avisos de partidas competitivas', value: 'cargo_competitivo', emoji: '⚔️' }
+                ]);
 
-        if (playerCount !== lastPlayerCount) {
-            lastPlayerCount = playerCount;
+            const row = new ActionRowBuilder().addComponents(selectMenu);
             
-            let indicator = "";
-            if (playerCount === 0) {
-                indicator = "⚪⚪⚪⚪⚪";
-            } else if (playerCount > 0 && playerCount < 5) {
-                indicator = "🟢".repeat(playerCount) + "⚪".repeat(5 - playerCount);
-            } else {
-                indicator = "🔴🔴🔴🔴🔴";
-                playerCount = 5;
-            }
-
-            const messageContent = `**Servidor VIP - Flee the Facility**\n${playerCount} jogadores ${indicator}`;
-            
-            await axios.post(WEBHOOK_URL, {
-                content: messageContent
-            });
+            // Envia o painel para o canal
+            await channel.send({ embeds: [embed], components: [row] });
+            console.log("Painel de cargos enviado com sucesso para o canal!");
         }
     } catch (error) {
-        console.error("Erro ao consultar o servidor VIP:", error.message);
+        console.error("Erro ao enviar o painel automático:", error);
     }
-}
+});
 
-setInterval(checkPrivateServer, 30000);
-checkPrivateServer();
-console.log("Monitor de servidor VIP privado iniciado!");
+// Evento para quando o utilizador seleciona opções no menu
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isStringSelectMenu()) return;
+    if (interaction.customId !== 'menu_cargos') return;
+
+    const member = interaction.member;
+    const selectedValues = interaction.values;
+
+    let added = [];
+    let removed = [];
+
+    for (const [menuKey, roleId] of Object.entries(rolesMap)) {
+        const role = interaction.guild.roles.cache.get(roleId);
+        if (!role) continue;
+
+        const hasRole = member.roles.cache.has(roleId);
+        const isSelected = selectedValues.includes(menuKey);
+
+        if (isSelected && !hasRole) {
+            await member.roles.add(roleId);
+            added.push(role.name);
+        } else if (!isSelected && hasRole) {
+            await member.roles.remove(roleId);
+            removed.push(role.name);
+        }
+    }
+
+    let resposta = "Preferências de cargos atualizadas!\n";
+    if (added.length > 0) resposta += `✅ Adicionados: ${added.join(', ')}\n`;
+    if (removed.length > 0) resposta += `❌ Removidos: ${removed.join(', ')}\n`;
+    if (added.length === 0 && removed.length === 0) resposta = "Nenhuma alteração nos cargos.";
+
+    await interaction.reply({ content: resposta, ephemeral: true });
+});
+
+client.login(TOKEN);
