@@ -1,0 +1,9 @@
+{
+  "name": "monitor-flee",
+  "version": "1.0.0",
+  "description": "Monitor de servidor privado do Roblox",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "latest"
+  }
+}
