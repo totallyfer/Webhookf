@@ -1,18 +1,18 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, AttachmentBuilder } = require('discord.js');
 const express = require('express');
 
-// --- Configuração do Servidor Web para o Render ---
+// --- Servidor Web para o Render ---
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-    res.send('Bot do Discord está online e ativo!');
+    res.send('Bot do Discord com sistema de Cargos e Tickets está online!');
 });
 
 app.listen(PORT, () => {
     console.log(`Servidor web a correr na porta ${PORT}`);
 });
-// --------------------------------------------------
+// ----------------------------------
 
 const client = new Client({ 
     intents: [
@@ -23,7 +23,7 @@ const client = new Client({
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
-// IDs reais dos cargos do teu servidor
+// --- Configurações dos Cargos ---
 const rolesMap = {
     'cargo_jogar': '1545802190348615722',
     'cargo_sorteio': '1545802191602982945',
@@ -32,16 +32,21 @@ const rolesMap = {
     'cargo_gamenights': '1545802199060447302',
     'cargo_competitivo': '1545802198129057863'
 };
+const CHANNEL_CARGOS_ID = "1545802265519071272";
 
-const CHANNEL_ID = "1545802265519071272";
+// --- Configurações do Sistema de Tickets (Com os teus IDs) ---
+const CHANNEL_TICKET_ID = "1545802277690806303"; 
+const TICKET_CATEGORY_ID = "1545802221340594316"; 
+const STAFF_ROLE_ID = "1545802108522070026"; 
 
 client.once('ready', async () => {
     console.log(`Bot online como ${client.user.tag}!`);
 
     try {
-        const channel = await client.channels.fetch(CHANNEL_ID);
-        if (channel) {
-            const embed = new EmbedBuilder()
+        // 1. Enviar Painel de Cargos
+        const channelCargos = await client.channels.fetch(CHANNEL_CARGOS_ID);
+        if (channelCargos) {
+            const embedCargos = new EmbedBuilder()
                 .setTitle("🔔 Notificações")
                 .setDescription(
                     "• Selecione as notificações que deseja receber no servidor. Você poderá escolher quais tipos de conteúdo deseja acompanhar e receber avisos quando houver novidades.\n\n" +
@@ -69,49 +74,193 @@ client.once('ready', async () => {
                     { label: 'Not Competitivo', description: 'Avisos de partidas competitivas', value: 'cargo_competitivo', emoji: '⚔️' }
                 ]);
 
-            const row = new ActionRowBuilder().addComponents(selectMenu);
-            
-            await channel.send({ embeds: [embed], components: [row] });
-            console.log("Painel detalhado de cargos enviado com sucesso!");
+            const rowCargos = new ActionRowBuilder().addComponents(selectMenu);
+            await channelCargos.send({ embeds: [embedCargos], components: [rowCargos] });
         }
+
+        // 2. Enviar Painel de Tickets
+        const channelTicket = await client.channels.fetch(CHANNEL_TICKET_ID);
+        if (channelTicket) {
+            const embedTicket = new EmbedBuilder()
+                .setTitle("📄 Suporte De Ticket")
+                .setDescription("Olá. Seja bem-vindo ao centro de atendimento da SFC, mais informações abaixo.")
+                .setColor(0x0055FF)
+                .addFields({
+                    name: "🔍 Suporte Geral",
+                    value: "• Sorteios\n• Denúncias\n• Resgatar\n• Problemas\n• Parcerias\n• Dúvidas"
+                })
+                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551778580969689138/245_Sem_Titulo_20260903163413.png?ex=6ab335ec&is=6ab1e46c&hm=7502dc3d2b90d52a2da843f36edc4cbe103ce38cb6873457aab2a2db8830fd18&");
+
+            const buttonTicket = new ButtonBuilder()
+                .setCustomId('abrir_ticket')
+                .setLabel('Abra Um Ticket')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🎫');
+
+            const rowTicket = new ActionRowBuilder().addComponents(buttonTicket);
+            await channelTicket.send({ embeds: [embedTicket], components: [rowTicket] });
+            console.log("Painéis enviados com sucesso!");
+        }
+
     } catch (error) {
-        console.error("Erro ao enviar o painel automático:", error);
+        console.error("Erro ao enviar painéis automáticos:", error);
     }
 });
 
-// Evento para gerir a seleção dos cargos no menu
+// Eventos de Interação
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
-    if (interaction.customId !== 'menu_cargos') return;
+    // Menu de Cargos
+    if (interaction.isStringSelectMenu() && interaction.customId === 'menu_cargos') {
+        const member = interaction.member;
+        const selectedValues = interaction.values;
+        let added = [];
+        let removed = [];
 
-    const member = interaction.member;
-    const selectedValues = interaction.values;
+        for (const [menuKey, roleId] of Object.entries(rolesMap)) {
+            const role = interaction.guild.roles.cache.get(roleId);
+            if (!role) continue;
 
-    let added = [];
-    let removed = [];
+            const hasRole = member.roles.cache.has(roleId);
+            const isSelected = selectedValues.includes(menuKey);
 
-    for (const [menuKey, roleId] of Object.entries(rolesMap)) {
-        const role = interaction.guild.roles.cache.get(roleId);
-        if (!role) continue;
-
-        const hasRole = member.roles.cache.has(roleId);
-        const isSelected = selectedValues.includes(menuKey);
-
-        if (isSelected && !hasRole) {
-            await member.roles.add(roleId);
-            added.push(role.name);
-        } else if (!isSelected && hasRole) {
-            await member.roles.remove(roleId);
-            removed.push(role.name);
+            if (isSelected && !hasRole) {
+                await member.roles.add(roleId);
+                added.push(role.name);
+            } else if (!isSelected && hasRole) {
+                await member.roles.remove(roleId);
+                removed.push(role.name);
+            }
         }
+
+        let resposta = "Preferências de cargos atualizadas!\n";
+        if (added.length > 0) resposta += `✅ Adicionados: ${added.join(', ')}\n`;
+        if (removed.length > 0) resposta += `❌ Removidos: ${removed.join(', ')}\n`;
+        if (added.length === 0 && removed.length === 0) resposta = "Nenhuma alteração nos cargos.";
+
+        await interaction.reply({ content: resposta, ephemeral: true });
+        return;
     }
 
-    let resposta = "Preferências de cargos atualizadas!\n";
-    if (added.length > 0) resposta += `✅ Adicionados: ${added.join(', ')}\n`;
-    if (removed.length > 0) resposta += `❌ Removidos: ${removed.join(', ')}\n`;
-    if (added.length === 0 && removed.length === 0) resposta = "Nenhuma alteração nos cargos.";
+    // Sistema de Tickets (Botões)
+    if (interaction.isButton()) {
+        const customId = interaction.customId;
 
-    await interaction.reply({ content: resposta, ephemeral: true });
+        // 1. Abrir Ticket
+        if (customId === 'abrir_ticket') {
+            await interaction.deferReply({ ephemeral: true });
+
+            try {
+                const ticketChannel = await interaction.guild.channels.create({
+                    name: `ticket-${interaction.user.username}`,
+                    type: ChannelType.GuildText,
+                    parent: TICKET_CATEGORY_ID,
+                    permissionOverwrites: [
+                        {
+                            id: interaction.guild.id,
+                            deny: [PermissionFlagsBits.ViewChannel],
+                        },
+                        {
+                            id: interaction.user.id,
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                        },
+                        {
+                            id: STAFF_ROLE_ID,
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                        },
+                    ],
+                });
+
+                const embedPrivate = new EmbedBuilder()
+                    .setTitle("🎫 Atendimento Iniciado")
+                    .setDescription(`Olá ${interaction.user}, a nossa staff irá atender-te em breve.\nExplica detalhadamente o teu problema ou dúvida.`)
+                    .setColor(0x00FF00);
+
+                // Criar os botões de controlo do ticket
+                const btnClaim = new ButtonBuilder().setCustomId('reivindicar_ticket').setLabel('Reivindicar').setStyle(ButtonStyle.Primary).setEmoji('🙋‍♂️');
+                const btnClose = new ButtonBuilder().setCustomId('fechar_ticket').setLabel('Fechar').setStyle(ButtonStyle.Secondary).setEmoji('🔒');
+                const btnTranscript = new ButtonBuilder().setCustomId('transcricao_ticket').setLabel('Transcrição').setStyle(ButtonStyle.Success).setEmoji('📜');
+                const btnDelete = new ButtonBuilder().setCustomId('deletar_ticket').setLabel('Deletar').setStyle(ButtonStyle.Danger).setEmoji('🗑️');
+
+                const rowControls = new ActionRowBuilder().addComponents(btnClaim, btnClose, btnTranscript, btnDelete);
+
+                await ticketChannel.send({ content: `<@&${STAFF_ROLE_ID}> | ${interaction.user}`, embeds: [embedPrivate], components: [rowControls] });
+
+                await interaction.editReply({ content: `O teu ticket foi criado com sucesso aqui: ${ticketChannel}!` });
+            } catch (error) {
+                console.error("Erro ao criar ticket:", error);
+                await interaction.editReply({ content: 'Ocorreu um erro ao criar o teu ticket. Tenta novamente.' });
+            }
+            return;
+        }
+
+        // Verificação de Staff para os botões restritos
+        const isStaff = interaction.member.roles.cache.has(STAFF_ROLE_ID);
+        const restrictedActions = ['reivindicar_ticket', 'transcricao_ticket', 'deletar_ticket'];
+
+        if (restrictedActions.includes(customId) && !isStaff) {
+            return await interaction.reply({ content: '❌ Apenas membros da **Staff** podem utilizar esta opção!', ephemeral: true });
+        }
+
+        // 2. Reivindicar Ticket
+        if (customId === 'reivindicar_ticket') {
+            await interaction.reply({ content: `✅ Este ticket foi reivindicado por ${interaction.user}!` });
+            return;
+        }
+
+        // 3. Fechar Ticket (Remove o acesso de quem abriu e deixa só a staff)
+        if (customId === 'fechar_ticket') {
+            await interaction.reply({ content: '🔒 Ticket fechado. Apenas a staff mantém acesso para análise.' });
+            try {
+                // Tenta remover as permissões do criador do canal se ele for encontrado no nome ou permissões
+                const channel = interaction.channel;
+                // Atualiza as permissões do canal tirando a visibilidade de membros comuns e mantendo a staff
+                await channel.permissionOverwrites.set([
+                    {
+                        id: interaction.guild.id,
+                        deny: [PermissionFlagsBits.ViewChannel],
+                    },
+                    {
+                        id: STAFF_ROLE_ID,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    }
+                ]);
+            } catch (err) {
+                console.error("Erro ao fechar permissões:", err);
+            }
+            return;
+        }
+
+        // 4. Transcrição (Gera um ficheiro txt simples com as mensagens do canal)
+        if (customId === 'transcricao_ticket') {
+            await interaction.deferReply();
+            try {
+                const messages = await interaction.channel.messages.fetch({ limit: 100 });
+                const log = messages.reverse().map(m => `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content}`).join('\n');
+                
+                const buffer = Buffer.from(log, 'utf-8');
+                const attachment = new AttachmentBuilder(buffer, { name: `transcricao-${interaction.channel.name}.txt` });
+
+                await interaction.editReply({ content: '📜 Transcrição do ticket gerada com sucesso:', files: [attachment] });
+            } catch (error) {
+                console.error("Erro ao gerar transcrição:", error);
+                await interaction.editReply({ content: 'Erro ao gerar o ficheiro de transcrição.' });
+            }
+            return;
+        }
+
+        // 5. Deletar Ticket
+        if (customId === 'deletar_ticket') {
+            await interaction.reply({ content: '🗑️ O canal será apagado em 5 segundos...' });
+            setTimeout(async () => {
+                try {
+                    await interaction.channel.delete();
+                } catch (err) {
+                    console.error("Erro ao apagar canal de ticket:", err);
+                }
+            }, 5000);
+            return;
+        }
+    }
 });
 
 client.login(TOKEN);
