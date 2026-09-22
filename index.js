@@ -34,7 +34,7 @@ const rolesMap = {
 };
 const CHANNEL_CARGOS_ID = "1545802265519071272";
 
-// --- Configurações do Sistema de Tickets (Com os teus IDs) ---
+// --- Configurações do Sistema de Tickets ---
 const CHANNEL_TICKET_ID = "1545802277690806303"; 
 const TICKET_CATEGORY_ID = "1545802221340594316"; 
 const STAFF_ROLE_ID = "1545802108522070026"; 
@@ -78,7 +78,7 @@ client.once('ready', async () => {
             await channelCargos.send({ embeds: [embedCargos], components: [rowCargos] });
         }
 
-        // 2. Enviar Painel de Tickets
+        // 2. Enviar Painel de Tickets (Com Menu de Seleção e Nova Imagem)
         const channelTicket = await client.channels.fetch(CHANNEL_TICKET_ID);
         if (channelTicket) {
             const embedTicket = new EmbedBuilder()
@@ -89,15 +89,21 @@ client.once('ready', async () => {
                     name: "🔍 Suporte Geral",
                     value: "• Sorteios\n• Denúncias\n• Resgatar\n• Problemas\n• Parcerias\n• Dúvidas"
                 })
-                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551778580969689138/245_Sem_Titulo_20260903163413.png?ex=6ab335ec&is=6ab1e46c&hm=7502dc3d2b90d52a2da843f36edc4cbe103ce38cb6873457aab2a2db8830fd18&");
+                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551790694253858837/242_Sem_Titulo_20260903145814.png?ex=6ab34134&is=6ab1efb4&hm=c6a90148f98434cfd0fef50c29311e0675bd6650062a448dfd09822a68c2b17c&");
 
-            const buttonTicket = new ButtonBuilder()
-                .setCustomId('abrir_ticket')
-                .setLabel('Abra Um Ticket')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🎫');
+            const selectMenuTicket = new StringSelectMenuBuilder()
+                .setCustomId('menu_criar_ticket')
+                .setPlaceholder('Abra Um Ticket')
+                .addOptions([
+                    { label: 'Sorteios', description: 'Atendimento sobre sorteios', value: 'ticket_sorteios', emoji: '🎁' },
+                    { label: 'Denúncias', description: 'Fazer uma denúncia', value: 'ticket_denuncias', emoji: '🚨' },
+                    { label: 'Resgatar', description: 'Resgatar prémios ou recompensas', value: 'ticket_resgatar', emoji: '🏆' },
+                    { label: 'Problemas', description: 'Reportar problemas ou bugs', value: 'ticket_problemas', emoji: '⚠️' },
+                    { label: 'Parcerias', description: 'Propostas de parcerias', value: 'ticket_parcerias', emoji: '🤝' },
+                    { label: 'Dúvidas', description: 'Tirar dúvidas gerais', value: 'ticket_duvidas', emoji: '❓' }
+                ]);
 
-            const rowTicket = new ActionRowBuilder().addComponents(buttonTicket);
+            const rowTicket = new ActionRowBuilder().addComponents(selectMenuTicket);
             await channelTicket.send({ embeds: [embedTicket], components: [rowTicket] });
             console.log("Painéis enviados com sucesso!");
         }
@@ -109,7 +115,7 @@ client.once('ready', async () => {
 
 // Eventos de Interação
 client.on('interactionCreate', async interaction => {
-    // Menu de Cargos
+    // 1. Menu de Cargos
     if (interaction.isStringSelectMenu() && interaction.customId === 'menu_cargos') {
         const member = interaction.member;
         const selectedValues = interaction.values;
@@ -141,59 +147,58 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    // Sistema de Tickets (Botões)
+    // 2. Menu de Seleção para Criar Ticket
+    if (interaction.isStringSelectMenu() && interaction.customId === 'menu_criar_ticket') {
+        await interaction.deferReply({ ephemeral: true });
+        const tipoTicket = interaction.values[0];
+
+        try {
+            const ticketChannel = await interaction.guild.channels.create({
+                name: `ticket-${tipoTicket.replace('ticket_', '')}-${interaction.user.username}`,
+                type: ChannelType.GuildText,
+                parent: TICKET_CATEGORY_ID,
+                permissionOverwrites: [
+                    {
+                        id: interaction.guild.id,
+                        deny: [PermissionFlagsBits.ViewChannel],
+                    },
+                    {
+                        id: interaction.user.id,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    },
+                    {
+                        id: STAFF_ROLE_ID,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    },
+                ],
+            });
+
+            const embedPrivate = new EmbedBuilder()
+                .setTitle(`🎫 Atendimento: ${tipoTicket.replace('ticket_', '').toUpperCase()}`)
+                .setDescription(`Olá ${interaction.user}, o seu ticket de **${tipoTicket.replace('ticket_', '')}** foi aberto.\nA nossa staff irá atender-te em breve.`)
+                .setColor(0x00FF00);
+
+            // Botões de Controlo do Ticket
+            const btnClaim = new ButtonBuilder().setCustomId('reivindicar_ticket').setLabel('Reivindicar').setStyle(ButtonStyle.Primary).setEmoji('🙋‍♂️');
+            const btnClose = new ButtonBuilder().setCustomId('fechar_ticket').setLabel('Fechar').setStyle(ButtonStyle.Secondary).setEmoji('🔒');
+            const btnTranscript = new ButtonBuilder().setCustomId('transcricao_ticket').setLabel('Transcrição').setStyle(ButtonStyle.Success).setEmoji('📜');
+            const btnDelete = new ButtonBuilder().setCustomId('deletar_ticket').setLabel('Deletar').setStyle(ButtonStyle.Danger).setEmoji('🗑️');
+
+            const rowControls = new ActionRowBuilder().addComponents(btnClaim, btnClose, btnTranscript, btnDelete);
+
+            await ticketChannel.send({ content: `<@&${STAFF_ROLE_ID}> | ${interaction.user}`, embeds: [embedPrivate], components: [rowControls] });
+
+            await interaction.editReply({ content: `O teu ticket foi criado com sucesso aqui: ${ticketChannel}!` });
+        } catch (error) {
+            console.error("Erro ao criar ticket:", error);
+            await interaction.editReply({ content: 'Ocorreu um erro ao criar o teu ticket. Tenta novamente.' });
+        }
+        return;
+    }
+
+    // 3. Botões de Gestão dentro do Canal do Ticket
     if (interaction.isButton()) {
         const customId = interaction.customId;
-
-        // 1. Abrir Ticket
-        if (customId === 'abrir_ticket') {
-            await interaction.deferReply({ ephemeral: true });
-
-            try {
-                const ticketChannel = await interaction.guild.channels.create({
-                    name: `ticket-${interaction.user.username}`,
-                    type: ChannelType.GuildText,
-                    parent: TICKET_CATEGORY_ID,
-                    permissionOverwrites: [
-                        {
-                            id: interaction.guild.id,
-                            deny: [PermissionFlagsBits.ViewChannel],
-                        },
-                        {
-                            id: interaction.user.id,
-                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                        },
-                        {
-                            id: STAFF_ROLE_ID,
-                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                        },
-                    ],
-                });
-
-                const embedPrivate = new EmbedBuilder()
-                    .setTitle("🎫 Atendimento Iniciado")
-                    .setDescription(`Olá ${interaction.user}, a nossa staff irá atender-te em breve.\nExplica detalhadamente o teu problema ou dúvida.`)
-                    .setColor(0x00FF00);
-
-                // Criar os botões de controlo do ticket
-                const btnClaim = new ButtonBuilder().setCustomId('reivindicar_ticket').setLabel('Reivindicar').setStyle(ButtonStyle.Primary).setEmoji('🙋‍♂️');
-                const btnClose = new ButtonBuilder().setCustomId('fechar_ticket').setLabel('Fechar').setStyle(ButtonStyle.Secondary).setEmoji('🔒');
-                const btnTranscript = new ButtonBuilder().setCustomId('transcricao_ticket').setLabel('Transcrição').setStyle(ButtonStyle.Success).setEmoji('📜');
-                const btnDelete = new ButtonBuilder().setCustomId('deletar_ticket').setLabel('Deletar').setStyle(ButtonStyle.Danger).setEmoji('🗑️');
-
-                const rowControls = new ActionRowBuilder().addComponents(btnClaim, btnClose, btnTranscript, btnDelete);
-
-                await ticketChannel.send({ content: `<@&${STAFF_ROLE_ID}> | ${interaction.user}`, embeds: [embedPrivate], components: [rowControls] });
-
-                await interaction.editReply({ content: `O teu ticket foi criado com sucesso aqui: ${ticketChannel}!` });
-            } catch (error) {
-                console.error("Erro ao criar ticket:", error);
-                await interaction.editReply({ content: 'Ocorreu um erro ao criar o teu ticket. Tenta novamente.' });
-            }
-            return;
-        }
-
-        // Verificação de Staff para os botões restritos
         const isStaff = interaction.member.roles.cache.has(STAFF_ROLE_ID);
         const restrictedActions = ['reivindicar_ticket', 'transcricao_ticket', 'deletar_ticket'];
 
@@ -201,20 +206,17 @@ client.on('interactionCreate', async interaction => {
             return await interaction.reply({ content: '❌ Apenas membros da **Staff** podem utilizar esta opção!', ephemeral: true });
         }
 
-        // 2. Reivindicar Ticket
+        // Reivindicar
         if (customId === 'reivindicar_ticket') {
             await interaction.reply({ content: `✅ Este ticket foi reivindicado por ${interaction.user}!` });
             return;
         }
 
-        // 3. Fechar Ticket (Remove o acesso de quem abriu e deixa só a staff)
+        // Fechar (Remove acesso do utilizador comum)
         if (customId === 'fechar_ticket') {
             await interaction.reply({ content: '🔒 Ticket fechado. Apenas a staff mantém acesso para análise.' });
             try {
-                // Tenta remover as permissões do criador do canal se ele for encontrado no nome ou permissões
-                const channel = interaction.channel;
-                // Atualiza as permissões do canal tirando a visibilidade de membros comuns e mantendo a staff
-                await channel.permissionOverwrites.set([
+                await interaction.channel.permissionOverwrites.set([
                     {
                         id: interaction.guild.id,
                         deny: [PermissionFlagsBits.ViewChannel],
@@ -230,7 +232,7 @@ client.on('interactionCreate', async interaction => {
             return;
         }
 
-        // 4. Transcrição (Gera um ficheiro txt simples com as mensagens do canal)
+        // Transcrição
         if (customId === 'transcricao_ticket') {
             await interaction.deferReply();
             try {
@@ -248,7 +250,7 @@ client.on('interactionCreate', async interaction => {
             return;
         }
 
-        // 5. Deletar Ticket
+        // Deletar
         if (customId === 'deletar_ticket') {
             await interaction.reply({ content: '🗑️ O canal será apagado em 5 segundos...' });
             setTimeout(async () => {
@@ -264,3 +266,4 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.login(TOKEN);
+
