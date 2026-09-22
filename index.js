@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-    res.send('Bot do Discord com sistema de Cargos e Tickets está online!');
+    res.send('Bot do Discord com sistema de Cargos, Tickets e Avaliação está online!');
 });
 
 app.listen(PORT, () => {
@@ -23,7 +23,7 @@ const client = new Client({
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
-// --- Configurações dos Cargos ---
+// --- Configurações dos Cargos Gerais ---
 const rolesMap = {
     'cargo_jogar': '1545802190348615722',
     'cargo_sorteio': '1545802191602982945',
@@ -38,6 +38,11 @@ const CHANNEL_CARGOS_ID = "1545802265519071272";
 const CHANNEL_TICKET_ID = "1545802277690806303"; 
 const TICKET_CATEGORY_ID = "1545802221340594316"; 
 const STAFF_ROLE_ID = "1545802108522070026"; 
+
+// --- Configuração da Avaliação Competitiva ---
+const CHANNEL_AVALIACAO_ID = "1545802302751776810"; 
+const POTENCIAL_PLAYER_ROLE_ID = "1545802159579336794";
+const IMG_ASSET = "https://cdn.discordapp.com/attachments/1545802331465977976/1551796059989217290/a897e8282f1ad77db2c5bfc1096edf37.webp";
 
 client.once('ready', async () => {
     console.log(`Bot online como ${client.user.tag}!`);
@@ -58,7 +63,7 @@ client.once('ready', async () => {
                     "✨ **@Not Gamenights** • Receba avisos sobre GameNights, partidas, atividades em grupo e recompensas disponíveis para os participantes."
                 )
                 .setColor(0xFFD700)
-                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551778580969689138/245_Sem_Titulo_20260903163413.png?ex=6ab335ec&is=6ab1e46c&hm=7502dc3d2b90d52a2da843f36edc4cbe103ce38cb6873457aab2a2db8830fd18&");
+                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551778580969689138/245_Sem_Titulo_20260903163413.png");
 
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('menu_cargos')
@@ -78,18 +83,18 @@ client.once('ready', async () => {
             await channelCargos.send({ embeds: [embedCargos], components: [rowCargos] });
         }
 
-        // 2. Enviar Painel de Tickets (Com Menu de Seleção e Nova Imagem)
+        // 2. Enviar Painel de Tickets
         const channelTicket = await client.channels.fetch(CHANNEL_TICKET_ID);
         if (channelTicket) {
             const embedTicket = new EmbedBuilder()
-                .setTitle("<:form:1545806408295915571> Suporte De Ticket")
+                .setTitle("📄 Suporte De Ticket")
                 .setDescription("Olá. Seja bem-vindo ao centro de atendimento da SFC, mais informações abaixo.")
                 .setColor(0x0055FF)
                 .addFields({
-                    name: "<:lupa:1545806404902985808> Suporte Geral",
+                    name: "🔍 Suporte Geral",
                     value: "• Sorteios\n• Denúncias\n• Resgatar\n• Problemas\n• Parcerias\n• Dúvidas"
                 })
-                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551790694253858837/242_Sem_Titulo_20260903145814.png?ex=6ab34134&is=6ab1efb4&hm=c6a90148f98434cfd0fef50c29311e0675bd6650062a448dfd09822a68c2b17c&");
+                .setImage("https://cdn.discordapp.com/attachments/1545802331465977976/1551790694253858837/242_Sem_Titulo_20260903145814.png");
 
             const selectMenuTicket = new StringSelectMenuBuilder()
                 .setCustomId('menu_criar_ticket')
@@ -105,7 +110,30 @@ client.once('ready', async () => {
 
             const rowTicket = new ActionRowBuilder().addComponents(selectMenuTicket);
             await channelTicket.send({ embeds: [embedTicket], components: [rowTicket] });
-            console.log("Painéis enviados com sucesso!");
+        }
+
+        // 3. Enviar Painel de Avaliação Competitiva (Potencial Player)
+        const channelAvaliacao = await client.channels.fetch(CHANNEL_AVALIACAO_ID);
+        if (channelAvaliacao) {
+            const embedAvaliacao = new EmbedBuilder()
+                .setTitle("<:analise:1545820646439657492> Avaliação competitiva")
+                .setDescription(
+                    "**Tem interesse em participar do competitivo da comunidade?**\n\n" +
+                    "Selecione o cargo **Potencial Competitivo** para demonstrar seu interesse em participar de partidas competitivas, campeonatos, rankings e outras atividades relacionadas ao competitivo."
+                )
+                .setColor(0x1E90FF)
+                .setThumbnail(IMG_ASSET)
+                .setFooter({ text: "Competitivo SFC", iconURL: IMG_ASSET });
+
+            const btnPotencial = new ButtonBuilder()
+                .setCustomId('pegar_potencial_player')
+                .setLabel('Potencial Player')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⚔️');
+
+            const rowAvaliacao = new ActionRowBuilder().addComponents(btnPotencial);
+            await channelAvaliacao.send({ embeds: [embedAvaliacao], components: [rowAvaliacao] });
+            console.log("Todos os painéis foram enviados com sucesso!");
         }
 
     } catch (error) {
@@ -115,7 +143,7 @@ client.once('ready', async () => {
 
 // Eventos de Interação
 client.on('interactionCreate', async interaction => {
-    // 1. Menu de Cargos
+    // 1. Menu de Cargos Gerais
     if (interaction.isStringSelectMenu() && interaction.customId === 'menu_cargos') {
         const member = interaction.member;
         const selectedValues = interaction.values;
@@ -147,7 +175,26 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    // 2. Menu de Seleção para Criar Ticket
+    // 2. Botão de Obter Cargo "Potencial Player"
+    if (interaction.isButton() && interaction.customId === 'pegar_potencial_player') {
+        const member = interaction.member;
+        const role = interaction.guild.roles.cache.get(POTENCIAL_PLAYER_ROLE_ID);
+
+        if (!role) {
+            return await interaction.reply({ content: '❌ O cargo configurado não foi encontrado no servidor.', ephemeral: true });
+        }
+
+        if (member.roles.cache.has(POTENCIAL_PLAYER_ROLE_ID)) {
+            await member.roles.remove(role);
+            await interaction.reply({ content: '❌ O cargo **Potencial Player** foi removido de ti!', ephemeral: true });
+        } else {
+            await member.roles.add(role);
+            await interaction.reply({ content: '✅ O cargo **Potencial Player** foi atribuído a ti com sucesso!', ephemeral: true });
+        }
+        return;
+    }
+
+    // 3. Menu de Seleção para Criar Ticket
     if (interaction.isStringSelectMenu() && interaction.customId === 'menu_criar_ticket') {
         await interaction.deferReply({ ephemeral: true });
         const tipoTicket = interaction.values[0];
@@ -178,7 +225,6 @@ client.on('interactionCreate', async interaction => {
                 .setDescription(`Olá ${interaction.user}, o seu ticket de **${tipoTicket.replace('ticket_', '')}** foi aberto.\nA nossa staff irá atender-te em breve.`)
                 .setColor(0x00FF00);
 
-            // Botões de Controlo do Ticket
             const btnClaim = new ButtonBuilder().setCustomId('reivindicar_ticket').setLabel('Reivindicar').setStyle(ButtonStyle.Primary).setEmoji('🙋‍♂️');
             const btnClose = new ButtonBuilder().setCustomId('fechar_ticket').setLabel('Fechar').setStyle(ButtonStyle.Secondary).setEmoji('🔒');
             const btnTranscript = new ButtonBuilder().setCustomId('transcricao_ticket').setLabel('Transcrição').setStyle(ButtonStyle.Success).setEmoji('📜');
@@ -196,7 +242,7 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    // 3. Botões de Gestão dentro do Canal do Ticket
+    // 4. Botões de Gestão dentro do Canal do Ticket
     if (interaction.isButton()) {
         const customId = interaction.customId;
         const isStaff = interaction.member.roles.cache.has(STAFF_ROLE_ID);
@@ -212,7 +258,7 @@ client.on('interactionCreate', async interaction => {
             return;
         }
 
-        // Fechar (Remove acesso do utilizador comum)
+        // Fechar
         if (customId === 'fechar_ticket') {
             await interaction.reply({ content: '🔒 Ticket fechado. Apenas a staff mantém acesso para análise.' });
             try {
@@ -266,4 +312,3 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.login(TOKEN);
-
