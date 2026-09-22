@@ -7,7 +7,8 @@ const client = new Client({
     ] 
 });
 
-const TOKEN = "MTU1MTc2ODIwNTQ0NDI1OTg2Mg.GX9eVw.jsLZuHUqQ3qysuqtcbzZYW9VPjCuW6vai8CWTA";
+// Lê o token de forma segura a partir das variáveis de ambiente da Railway
+const TOKEN = process.env.DISCORD_TOKEN;
 
 // IDs reais dos cargos do teu servidor
 const rolesMap = {
