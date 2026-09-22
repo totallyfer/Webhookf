@@ -3,20 +3,26 @@ const axios = require('axios');
 const WEBHOOK_URL = "https://discord.com/api/webhooks/1551708517780684890/u7YVefChhhN16aIbI0vUIx1lyN6cXRZXCtWl8h2S3R433O14xGmYKWTWWEFZWjROAHtd";
 const ROBLOX_SECURITY_COOKIE = "_WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items._|CAEQAhoEEAQYASIcCgRkdWlrEhQxMzU5MjQ4OTkzaNzU5NzI5NTQ3NmlUCgV1bmFtFtZRItLdG90UIJeWZlZmlnODdWIkeg5dWlkEgsxMDY3NTMzNzNsM3IgD.xnPPdbwD787_liHVkxvu3pjV5DLegF8P4wHAcREq_BHEljtkIw7Fr9dH_F5ruzljRqufTYRGU36WBGo8kwZ5sBMIOzLwnBzDxpNQT2wC2tVc06N_23Hqqf740wpGc0kFFX04oKafC6ZPTdvpv1-MBs7sidW3wf5slowRFdHr4LgGET7rX-GOTJmdAUiGy0y3bTnU6gB8e9bDitsq5lipTdD7xlQpw24MxFUcFgSDUMn218kBIS223noJKHdahWicGsaDXxdprlWinX_X1APU2gtnLfg9SRHFQgNWP3oEeEeOXKDmEZFBLHbdSRzsSLQUVLtgaiiM-yXcUhu1mcxxU_Kpv1qR34ZbOAKti3MTGjplI-c6SYQ-0KSuQd0uVJwGdRmPyL3EU4Z9S0gB7exzVkHq0BrmRy4dnlGiqCzuyBZ7EH2sAms-p-wnYAncsWjBt0ZHHqGwyIslbjUc-6pOxerU61h72XhDgfdo0hslgKfwtgAsdKl-mH3kZ-69y2vL0bt_aAxL77qToag1OaV02FXVF8hZtbqgwfKNTkTfN0cq4SzeqKe0Gzplva2X79M_NIOJq-H5Xea6oQvDwQK0LjKgTdP-xh2rVcxUoMyG-QSWd6JTJJuXBi-MA3_kN_68nsOKHIdAInVw7rmtagCyTYxPFii-OANK3OI3_4iQcFezJ9Gp4OMuAqBgJ_jySONa241V0sp030TzSazDGPWeiyWv3EuNKTTY8NA5XN94h_jukdgVMWcc52pZ0TLJ-tNxrmQDQY-YN2c6-G4WzGR-sIXPUS0rPjnirlcvdXW3kEx54F6749fnKil1w7GKWgnNndWn8yeSJz0pMnclOUNSVH6CWP-QI7qrkzZldXgrR7nRyf5n6R10NNpvG_9e7f12zE7VoSUdRwEMYqwgrwEpcA.x0L2nlqOjFBIxORe9E2mu";
 
-const ACCESS_CODE = "2d4e759b86daa346829c63217e903bee";
+const PLACE_ID = 893973440;
+// Usamos o ID interno do servidor privado associado ao link
+const PRIVATE_SERVER_ID = "2d4e759b86daa346829c63217e903bee"; 
 
 let lastPlayerCount = -1;
 
 async function checkPrivateServer() {
     try {
-        const response = await axios.get(`https://games.roblox.com/v1/private-servers/link?accessCode=${ACCESS_CODE}`, {
+        // Pedido alternativo para servidores VIP via API de listagem de servidores
+        const response = await axios.get(`https://games.roblox.com/v1/games/${PLACE_ID}/servers/Private?excludeFullGames=false&limit=100`, {
             headers: {
                 'Cookie': `.ROBLOXSECURITY=${ROBLOX_SECURITY_COOKIE}`
             }
         });
         
-        const serverData = response.data;
-        let playerCount = serverData ? serverData.playing : 0;
+        const servers = response.data.data || [];
+        // Procura pelo servidor privado correspondente na lista da API
+        const targetServer = servers.find(s => s.id === PRIVATE_SERVER_ID || (s.accessCode && s.accessCode.includes(PRIVATE_SERVER_ID)));
+        
+        let playerCount = targetServer ? targetServer.playing : 0;
 
         if (playerCount !== lastPlayerCount) {
             lastPlayerCount = playerCount;
